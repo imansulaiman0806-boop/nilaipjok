@@ -1,0 +1,8 @@
+{
+  "name": "Absensi & Penilaian Olahraga SMP PGRI JATIUWUNG",
+  "description": "Aplikasi manajemen kehadiran dan penilaian digital khusus untuk mata pelajaran olahraga di SMP PGRI Jatiuwung.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
