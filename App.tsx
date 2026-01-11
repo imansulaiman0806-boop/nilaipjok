@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { UserCog, ChevronLeft, Loader2, GraduationCap, Search, Activity, LayoutGrid, Clock, ShieldCheck, Zap, Scan, FileText, Info as InfoIcon, DownloadCloud, Smartphone, Download, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { UserCog, ChevronLeft, Loader2, GraduationCap, Search, Activity, LayoutGrid, Clock, ShieldCheck, Zap, Scan, FileText, Info as InfoIcon, DownloadCloud, Smartphone, Download, RefreshCw, AlertTriangle, Cloud } from 'lucide-react';
 import { AppState, Gender } from './types.ts';
 import TeacherDashboard from './components/TeacherDashboard.tsx';
 import StudentDashboard from './components/StudentDashboard.tsx';
@@ -13,9 +13,10 @@ const App: React.FC = () => {
   const [studentTab, setStudentTab] = useState<'presence' | 'grades' | 'info'>('presence');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [lastSync, setLastSync] = useState<string | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBtn, setShowInstallBtn] = useState(false);
-  const [errorStatus, setErrorStatus] = useState<string | null>(null);
+  const [dbError, setDbError] = useState<string | null>(null);
   
   const [data, setData] = useState<AppState>({
     students: [],
@@ -25,48 +26,81 @@ const App: React.FC = () => {
     }
   });
 
-  const loadData = async () => {
+  const loadData = useCallback(async (forceCloud = false) => {
     setIsLoading(true);
-    setErrorStatus(null);
+    setDbError(null);
     try {
-      // 1. Coba ambil dari Supabase dulu
-      if (supabase) {
-        const { data: dbData, error } = await supabase
-          .from('app_storage')
-          .select('data')
-          .eq('id', 1)
-          .maybeSingle();
+      if (!supabase) throw new Error("Supabase client not initialized");
 
-        if (dbData?.data) {
-          setData(dbData.data);
-          console.log("Data loaded from Cloud");
-        } else if (error) {
-          throw new Error("Cloud Error");
-        } else {
-          // Jika tabel kosong, cek LocalStorage
-          const local = localStorage.getItem('pgri_data');
-          if (local) setData(JSON.parse(local));
+      const { data: dbData, error } = await supabase
+        .from('app_storage')
+        .select('data, updated_at')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (dbData?.data) {
+        // Jika ada data di cloud, gunakan itu
+        setData(dbData.data);
+        setLastSync(new Date(dbData.updated_at).toLocaleTimeString());
+        localStorage.setItem('pgri_data', JSON.stringify(dbData.data));
+        console.log("Data loaded from Cloud");
+      } else {
+        // Jika cloud kosong, coba ambil dari lokal
+        const local = localStorage.getItem('pgri_data');
+        if (local) {
+          const parsed = JSON.parse(local);
+          setData(parsed);
+          console.log("Cloud empty, loaded from Local Storage");
         }
       }
-    } catch (err) {
-      console.warn("Koneksi Cloud gagal, beralih ke penyimpanan lokal.");
-      setErrorStatus("MODE OFFLINE");
+    } catch (err: any) {
+      setDbError(err.message);
       const local = localStorage.getItem('pgri_data');
       if (local) setData(JSON.parse(local));
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  const saveData = async (manualData?: AppState) => {
+    const dataToSave = manualData || data;
+    // Jangan simpan jika data benar-benar kosong (proteksi)
+    if (dataToSave.students.length === 0 && !manualData) {
+        console.warn("Prevented saving empty data to cloud");
+        localStorage.setItem('pgri_data', JSON.stringify(dataToSave));
+        return;
+    }
+
+    setIsSaving(true);
+    try {
+      localStorage.setItem('pgri_data', JSON.stringify(dataToSave));
+      if (supabase) {
+        const { error } = await supabase
+          .from('app_storage')
+          .upsert({ id: 1, data: dataToSave, updated_at: new Date().toISOString() });
+        if (error) throw error;
+        setLastSync(new Date().toLocaleTimeString());
+        setDbError(null);
+      }
+    } catch (err: any) {
+      setDbError("Gagal sinkron: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // Fix: Added handleInstallClick to resolve the 'Cannot find name' error
+  // Fix: Added handleInstallClick to resolve missing function error for PWA installation
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log(`User response to the install prompt: ${outcome}`);
-      setDeferredPrompt(null);
-      setShowInstallBtn(false);
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      console.log('User accepted the install prompt');
     }
+    setDeferredPrompt(null);
+    setShowInstallBtn(false);
   };
 
   useEffect(() => {
@@ -76,25 +110,14 @@ const App: React.FC = () => {
       setShowInstallBtn(true);
     });
     loadData();
-  }, []);
+  }, [loadData]);
 
+  // Auto-save debounced
   useEffect(() => {
     if (isLoading) return;
-    const save = async () => {
-      setIsSaving(true);
-      try {
-        localStorage.setItem('pgri_data', JSON.stringify(data));
-        if (supabase) {
-          await supabase.from('app_storage').upsert({ id: 1, data }).select();
-        }
-      } catch (err) {
-        console.error("Gagal sinkronisasi ke cloud.");
-      }
-      setIsSaving(false);
-    };
-    const timeout = setTimeout(save, 3000);
+    const timeout = setTimeout(() => saveData(), 3000);
     return () => clearTimeout(timeout);
-  }, [data, isLoading]);
+  }, [data]);
 
   if (isLoading) return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-[#020617]">
@@ -102,16 +125,19 @@ const App: React.FC = () => {
         <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
         <Zap className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-blue-500" />
       </div>
-      <span className="text-[10px] font-black tracking-[0.4em] text-white/40 uppercase">SINKRONISASI SISTEM...</span>
+      <span className="text-[10px] font-black tracking-[0.4em] text-white/40 uppercase animate-pulse">Sinkronisasi Cloud...</span>
     </div>
   );
 
   return (
     <div className="h-full w-full bg-[#020617] overflow-hidden flex flex-col font-['Plus_Jakarta_Sans']">
-      {/* Offline Indicator */}
-      {errorStatus && (
-        <div className="bg-amber-500 text-white text-[8px] font-black text-center py-1 tracking-widest uppercase">
-          {errorStatus} - DATA DISIMPAN DI HP ANDA
+      {dbError && (
+        <div className="bg-rose-600 text-white px-4 py-2 flex items-center justify-between shadow-lg z-[200]">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span className="text-[9px] font-black tracking-widest uppercase">ERROR: {dbError}</span>
+          </div>
+          <button onClick={() => loadData()} className="bg-white/20 px-3 py-1 rounded-lg text-[8px] font-black uppercase">RETRY</button>
         </div>
       )}
 
@@ -120,8 +146,10 @@ const App: React.FC = () => {
           <div className="h-full w-full overflow-y-auto flex flex-col items-center justify-center p-8 bg-gradient-to-b from-[#020617] to-[#0f172a]">
             
             <div className="mb-8 flex items-center gap-2 bg-white/5 border border-white/10 px-5 py-2 rounded-full shadow-2xl backdrop-blur-md">
-              <Zap className="w-3.5 h-3.5 text-blue-500 fill-blue-500" />
-              <span className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em]">PJOK DIGITAL SMP PGRI</span>
+              <Cloud className={`w-3.5 h-3.5 ${dbError ? 'text-rose-500' : 'text-emerald-500'}`} />
+              <span className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em]">
+                {lastSync ? `SINKRON: ${lastSync}` : 'MODE LOKAL'}
+              </span>
             </div>
 
             <div className="text-center mb-12">
@@ -140,7 +168,7 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mb-8">
               <button 
                 onClick={() => setView('teacher')}
-                className="group bg-slate-900/40 p-8 rounded-[3rem] shadow-2xl border border-white/5 hover:border-blue-500/30 hover:bg-slate-900/60 transition-all duration-500 flex flex-col items-center text-center relative overflow-hidden"
+                className="group bg-slate-900/40 p-8 rounded-[3rem] shadow-2xl border border-white/5 hover:border-blue-500/30 hover:bg-slate-900/60 transition-all duration-500 flex flex-col items-center text-center"
               >
                 <div className="w-20 h-20 bg-blue-600 rounded-[1.5rem] flex items-center justify-center text-white mb-6 shadow-xl group-hover:scale-110 transition-transform">
                   <UserCog className="w-10 h-10" />
@@ -151,7 +179,7 @@ const App: React.FC = () => {
 
               <button 
                 onClick={() => { setView('student_portal'); setStudentTab('presence'); }}
-                className="group bg-slate-900/40 p-8 rounded-[3rem] shadow-2xl border border-white/5 hover:border-emerald-500/30 hover:bg-slate-900/60 transition-all duration-500 flex flex-col items-center text-center relative overflow-hidden"
+                className="group bg-slate-900/40 p-8 rounded-[3rem] shadow-2xl border border-white/5 hover:border-emerald-500/30 hover:bg-slate-900/60 transition-all duration-500 flex flex-col items-center text-center"
               >
                 <div className="w-20 h-20 bg-emerald-500 rounded-[1.5rem] flex items-center justify-center text-white mb-6 shadow-xl group-hover:scale-110 transition-transform">
                   <GraduationCap className="w-10 h-10" />
@@ -171,48 +199,7 @@ const App: React.FC = () => {
                   <span className="text-xs font-black uppercase tracking-widest">PASANG APLIKASI DI HP</span>
                 </button>
               )}
-              
-              <button 
-                onClick={() => setView('guide')}
-                className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 px-8 py-4 rounded-3xl transition-all group"
-              >
-                <Smartphone className="w-5 h-5 text-blue-400 group-hover:animate-bounce" />
-                <span className="text-[10px] font-black text-white uppercase tracking-widest">PANDUAN INSTALASI</span>
-              </button>
             </div>
-
-            <div className="mt-12 text-center">
-              <p className="text-[8px] font-black text-white/20 tracking-[0.5em] uppercase">
-                © 2026 PJOK DIGITAL PGRI
-              </p>
-            </div>
-          </div>
-        )}
-
-        {view === 'guide' && (
-          <div className="h-full w-full overflow-y-auto flex flex-col items-center p-8 bg-[#020617] fade-in">
-             <div className="w-full max-w-2xl">
-               <button onClick={() => setView('landing')} className="flex items-center gap-2 text-blue-400 font-black text-[10px] tracking-widest uppercase mb-12">
-                 <ChevronLeft className="w-4 h-4" /> Kembali
-               </button>
-               <div className="space-y-8 text-center">
-                  <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">CARA JADI <span className="text-blue-500">APLIKASI</span></h2>
-                  <div className="grid gap-4 text-left">
-                    <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-white/5 flex gap-4 items-center">
-                       <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shrink-0">1</div>
-                       <p className="text-white/60 text-[11px] leading-relaxed font-bold uppercase tracking-wider">Buka Link ini di Chrome HP</p>
-                    </div>
-                    <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-white/5 flex gap-4 items-center">
-                       <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shrink-0">2</div>
-                       <p className="text-white/60 text-[11px] leading-relaxed font-bold uppercase tracking-wider">Klik Titik Tiga (⋮) Kanan Atas</p>
-                    </div>
-                    <div className="bg-slate-900/40 p-6 rounded-[2rem] border border-white/5 flex gap-4 items-center">
-                       <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shrink-0">3</div>
-                       <p className="text-white/60 text-[11px] leading-relaxed font-bold uppercase tracking-wider">Pilih "Instal Aplikasi"</p>
-                    </div>
-                  </div>
-               </div>
-             </div>
           </div>
         )}
 
@@ -222,33 +209,37 @@ const App: React.FC = () => {
               <button onClick={() => setView('landing')} className="flex items-center gap-2 text-slate-400 hover:text-blue-600 font-black text-[9px] tracking-widest uppercase transition-colors py-1.5">
                 <ChevronLeft className="w-3.5 h-3.5" /> Kembali
               </button>
-              <button onClick={loadData} className="text-slate-400 hover:text-blue-600 p-2">
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              </button>
+              <div className="flex items-center gap-2">
+                {isSaving && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                  {lastSync ? `Sync Terakhir: ${lastSync}` : 'Offline'}
+                </span>
+              </div>
             </div>
             <div className="flex-1 overflow-hidden">
-              <TeacherDashboard data={data} updateData={setData} />
+              <TeacherDashboard data={data} updateData={setData} forceCloudSave={() => saveData()} forceCloudLoad={() => loadData(true)} />
             </div>
           </div>
         )}
 
         {view === 'student_portal' && (
           <div className="h-full flex flex-col fade-in overflow-hidden relative bg-[#020617]">
-            <div className="shrink-0 bg-[#020617] border-b border-white/5 px-6 py-3 flex items-center justify-between z-50">
-              <button onClick={() => setView('landing')} className="flex items-center gap-2 text-white/30 hover:text-white font-black text-[9px] tracking-[0.3em] uppercase transition-all active:scale-95">
+             {/* Portal Siswa View - Tetap Sama */}
+             <div className="shrink-0 bg-[#020617] border-b border-white/5 px-6 py-3 flex items-center justify-between z-50">
+              <button onClick={() => setView('landing')} className="flex items-center gap-2 text-white/30 hover:text-white font-black text-[9px] tracking-[0.3em] uppercase transition-all">
                 <ChevronLeft className="w-4 h-4" /> KELUAR
               </button>
-              <span className="text-[9px] font-black tracking-widest text-emerald-500 uppercase">PORTAL SISWA AKTIF</span>
+              <span className="text-[9px] font-black tracking-widest text-emerald-500 uppercase">SINKRON: {lastSync || 'LOKAL'}</span>
             </div>
             <div className="flex-1 overflow-hidden relative">
               {studentTab === 'presence' && <StudentDashboard data={data} updateData={setData} />}
               {studentTab === 'grades' && <GradesPortal data={data} />}
               {studentTab === 'info' && (
-                <div className="h-full flex flex-col items-center justify-center p-12 text-center animate-in fade-in zoom-in duration-500">
+                <div className="h-full flex flex-col items-center justify-center p-12 text-center">
                    <InfoIcon className="w-12 h-12 text-blue-500 mb-6" />
-                   <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-4">PENGUMUMAN</h2>
+                   <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-4">INFO SISTEM</h2>
                    <p className="text-white/40 text-[10px] font-bold tracking-[0.2em] uppercase leading-loose max-w-lg">
-                     Aplikasi ini digunakan untuk memantau kehadiran dan nilai PJOK secara transparan.
+                     Data diperbarui secara otomatis setiap ada koneksi internet. Jika nilai tidak muncul, pastikan guru sudah menekan tombol 'SYNC' di Portal Guru.
                    </p>
                 </div>
               )}
@@ -263,13 +254,6 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
-
-      {isSaving && (
-        <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl shadow-2xl">
-          <Loader2 className="w-3 h-3 animate-spin" />
-          <span className="text-[8px] font-black tracking-[0.2em] uppercase">SINKRONISASI</span>
-        </div>
-      )}
     </div>
   );
 };
