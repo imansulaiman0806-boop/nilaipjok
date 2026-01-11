@@ -1,0 +1,24 @@
+
+{
+  "name": "PJOK Digital SMP PGRI",
+  "short_name": "PJOK PGRI",
+  "description": "Sistem Absensi dan Penilaian Digital SMP PGRI Jatiuwung",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3064/3064197.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3064/3064197.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

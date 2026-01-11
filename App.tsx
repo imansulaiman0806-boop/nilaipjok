@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { UserCog, ChevronLeft, Loader2, GraduationCap, Search, Activity, LayoutGrid, Clock, ShieldCheck, Zap, Scan, FileText, Info as InfoIcon } from 'lucide-react';
+import { UserCog, ChevronLeft, Loader2, GraduationCap, Search, Activity, LayoutGrid, Clock, ShieldCheck, Zap, Scan, FileText, Info as InfoIcon, DownloadCloud, Smartphone } from 'lucide-react';
 import { AppState, Gender } from './types.ts';
 import TeacherDashboard from './components/TeacherDashboard.tsx';
 import StudentDashboard from './components/StudentDashboard.tsx';
@@ -8,7 +9,7 @@ import { APP_TITLE, SCHOOL_NAME } from './constants.tsx';
 import { supabase } from './supabaseClient.ts';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'landing' | 'teacher' | 'student_portal'>('landing');
+  const [view, setView] = useState<'landing' | 'teacher' | 'student_portal' | 'guide'>('landing');
   const [studentTab, setStudentTab] = useState<'presence' | 'grades' | 'info'>('presence');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -124,12 +125,79 @@ const App: React.FC = () => {
 
             </div>
 
+            {/* Android Guide Button */}
+            <button 
+              onClick={() => setView('guide')}
+              className="mt-12 flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 px-8 py-4 rounded-3xl transition-all group"
+            >
+              <Smartphone className="w-5 h-5 text-blue-400 group-hover:animate-bounce" />
+              <span className="text-[11px] font-black text-white uppercase tracking-widest">PANDUAN INSTALASI ANDROID</span>
+            </button>
+
             {/* Footer */}
             <div className="mt-24 text-center">
               <p className="text-[9px] font-black text-white/20 tracking-[0.5em] uppercase">
                 © 2026 DEPARTEMEN IT SMP PGRI JATIUWUNG
               </p>
             </div>
+          </div>
+        )}
+
+        {view === 'guide' && (
+          <div className="h-full w-full overflow-y-auto flex flex-col items-center p-8 bg-[#020617] fade-in">
+             <div className="w-full max-w-2xl">
+               <button onClick={() => setView('landing')} className="flex items-center gap-2 text-blue-400 font-black text-[10px] tracking-widest uppercase mb-12">
+                 <ChevronLeft className="w-4 h-4" /> Kembali ke Menu Utama
+               </button>
+
+               <div className="space-y-12">
+                  <div className="text-center">
+                    <h2 className="text-4xl font-black text-white uppercase tracking-tighter mb-4">PANDUAN <span className="text-blue-500">ANDROID</span></h2>
+                    <p className="text-white/40 text-[10px] font-bold tracking-[0.2em] uppercase">IKUTI LANGKAH INI AGAR APLIKASI MUNCUL DI HP ANDA</p>
+                  </div>
+
+                  <div className="grid gap-6">
+                    <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-white/5 flex gap-6 items-start">
+                       <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black shrink-0 shadow-lg">1</div>
+                       <div>
+                         <h4 className="text-white font-black uppercase tracking-widest mb-2">Buka Google Chrome</h4>
+                         <p className="text-white/40 text-xs leading-relaxed">Buka browser Chrome di HP Anda dan masukkan alamat website aplikasi ini.</p>
+                       </div>
+                    </div>
+
+                    <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-white/5 flex gap-6 items-start">
+                       <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black shrink-0 shadow-lg">2</div>
+                       <div>
+                         <h4 className="text-white font-black uppercase tracking-widest mb-2">Klik Titik Tiga (⋮)</h4>
+                         <p className="text-white/40 text-xs leading-relaxed">Klik ikon titik tiga di pojok kanan atas browser Chrome Anda.</p>
+                       </div>
+                    </div>
+
+                    <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-white/5 flex gap-6 items-start">
+                       <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black shrink-0 shadow-lg">3</div>
+                       <div>
+                         <h4 className="text-white font-black uppercase tracking-widest mb-2">Pilih "Instal Aplikasi"</h4>
+                         <p className="text-white/40 text-xs leading-relaxed">Pilih menu <b>"Instal Aplikasi"</b> atau <b>"Tambahkan ke Layar Utama"</b>.</p>
+                       </div>
+                    </div>
+
+                    <div className="bg-emerald-500/10 p-8 rounded-[2rem] border border-emerald-500/20 flex gap-6 items-start">
+                       <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white font-black shrink-0 shadow-lg">4</div>
+                       <div>
+                         <h4 className="text-emerald-400 font-black uppercase tracking-widest mb-2">Selesai!</h4>
+                         <p className="text-emerald-400/60 text-xs leading-relaxed">Ikon aplikasi akan muncul di layar utama HP Anda seperti aplikasi Play Store.</p>
+                       </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-600/10 p-8 rounded-[2rem] border border-blue-500/20 text-center">
+                    <DownloadCloud className="w-8 h-8 text-blue-400 mx-auto mb-4" />
+                    <p className="text-white/60 text-[10px] font-bold tracking-[0.2em] uppercase leading-relaxed">
+                      APLIKASI INI SUDAH MENDUKUNG TEKNOLOGI PWA (PROGRESSIVE WEB APP) SEHINGGA TIDAK PERLU DOWNLOAD APK MANUAL.
+                    </p>
+                  </div>
+               </div>
+             </div>
           </div>
         )}
 

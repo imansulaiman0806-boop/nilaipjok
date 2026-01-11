@@ -1,9 +1,17 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#020617">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Sistem Digital PJOK - SMP PGRI Jatiuwung</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3064/3064197.png">
+    
     <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,7 +19,7 @@
     <style>
         :root {
             --primary: #2563eb;
-            --bg: #f8fafc;
+            --bg: #020617;
         }
         body, html { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
@@ -20,7 +28,8 @@
             background: var(--bg);
             height: 100vh;
             width: 100%;
-            overflow: hidden; /* Penting untuk Google Sites agar tidak double scroll */
+            overflow: hidden;
+            overscroll-behavior-y: contain; /* Mencegah pull-to-refresh di mobile */
         }
         #root {
             height: 100%;
@@ -31,15 +40,7 @@
         /* Custom Scrollbar */
         #root::-webkit-scrollbar { width: 6px; }
         #root::-webkit-scrollbar-track { background: transparent; }
-        #root::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        #root::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
     </style>
 
     <script type="importmap">
@@ -60,5 +61,16 @@
 <body>
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').then(reg => {
+            console.log('SW Registered');
+          }).catch(err => {
+            console.log('SW Registration failed', err);
+          });
+        });
+      }
+    </script>
 </body>
 </html>
