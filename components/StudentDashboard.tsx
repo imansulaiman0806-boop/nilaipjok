@@ -83,36 +83,8 @@ const StudentDashboard: React.FC<Props> = ({ data, updateData }) => {
     .slice(0, 10);
 
   return (
-    <div className="h-full w-full bg-[#020617] flex flex-col relative overflow-hidden text-slate-300 font-['Plus_Jakarta_Sans']">
+    <div className="h-full w-full bg-transparent flex flex-col relative overflow-hidden text-slate-300">
       
-      {/* Top Header Status */}
-      <div className="shrink-0 w-full px-6 py-4 flex justify-between items-center z-20">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
-            <span className="text-[8px] font-black tracking-[0.2em] text-white/60 uppercase flex items-center gap-2">
-              <Wifi className="w-3 h-3 text-emerald-500" /> LIVE NETWORK ACTIVE
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-white/40">
-            <Cpu className="w-3 h-3" />
-            <span className="text-[8px] font-black tracking-[0.2em] uppercase">CORE PROCESSOR V4.2</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <div className="text-[12px] font-black text-white tracking-widest">{currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
-            <div className="text-[8px] font-bold text-white/40 uppercase tracking-[0.2em]">
-              {currentTime.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' }).toUpperCase()}
-            </div>
-          </div>
-          <button className="text-white/40 hover:text-white transition-colors">
-            <Bell className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
       {/* Hidden Scanner Input */}
       <form onSubmit={handleAttendance} className="absolute opacity-0 pointer-events-none">
         <input ref={inputRef} type="text" value={identifier} onChange={(e) => setIdentifier(e.target.value)} autoComplete="off" />
@@ -125,7 +97,6 @@ const StudentDashboard: React.FC<Props> = ({ data, updateData }) => {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
           <div className="w-[400px] h-[400px] border border-blue-500/30 rounded-full animate-[spin_20s_linear_infinite]"></div>
           <div className="absolute w-[500px] h-[500px] border border-blue-500/10 rounded-full animate-[spin_35s_linear_infinite_reverse]"></div>
-          <div className="absolute w-[300px] h-[300px] border border-blue-500/50 rounded-full"></div>
         </div>
 
         {!activeStudent && !feedback ? (
@@ -146,27 +117,19 @@ const StudentDashboard: React.FC<Props> = ({ data, updateData }) => {
                 </div>
               </div>
               
-              {/* Outer Decorative Corner Brackets */}
               <div className="absolute -top-2 -left-2 w-6 h-6 border-t-2 border-l-2 border-blue-500 rounded-tl-xl"></div>
               <div className="absolute -top-2 -right-2 w-6 h-6 border-t-2 border-r-2 border-blue-500 rounded-tr-xl"></div>
               <div className="absolute -bottom-2 -left-2 w-6 h-6 border-b-2 border-l-2 border-blue-500 rounded-bl-xl"></div>
               <div className="absolute -bottom-2 -right-2 w-6 h-6 border-b-2 border-r-2 border-blue-500 rounded-br-xl"></div>
             </div>
 
-            {/* Status Pill */}
-            <div className="bg-blue-600/10 border border-blue-500/20 px-5 py-1.5 rounded-full flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-              <span className="text-[9px] font-black tracking-[0.2em] text-blue-400 uppercase">SYSTEM STANDBY</span>
-            </div>
-
-            {/* Main Title */}
             <div className="text-center space-y-4">
                <h1 className="text-4xl md:text-5xl font-black text-white tracking-[0.2em] uppercase">
                  VERIFIKASI <span className="text-blue-500">PRESENSI</span>
                </h1>
                <div className="max-w-xs mx-auto">
                  <p className="text-[9px] font-bold text-white/40 leading-relaxed tracking-[0.3em] uppercase">
-                   SISTEM CERDAS PEMINDAIAN KARTU OLAHRAGA SMP PGRI JATIUWUNG
+                   TAP KARTU DIGITAL ANDA UNTUK ABSENSI HARIAN
                  </p>
                </div>
             </div>
@@ -206,15 +169,13 @@ const StudentDashboard: React.FC<Props> = ({ data, updateData }) => {
       </div>
 
       {/* Footer Marquee / Recent History */}
-      <div className="shrink-0 w-full bg-[#020617]/80 backdrop-blur-md border-t border-white/5 px-6 py-4 z-20 overflow-hidden">
+      <div className="shrink-0 w-full bg-white/5 backdrop-blur-md border-t border-white/5 px-6 py-4 z-20 overflow-hidden pb-32 md:pb-24">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 shrink-0 bg-white/5 px-4 py-2 rounded-xl">
              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-             <span className="text-[9px] font-black tracking-widest uppercase text-emerald-500">SISTEM ONLINE</span>
+             <span className="text-[9px] font-black tracking-widest uppercase text-emerald-500">LIVE SYNC</span>
           </div>
-          
           <ChevronRight className="w-4 h-4 text-white/20 shrink-0" />
-          
           <div className="flex-1 overflow-hidden relative">
             <div className={`flex items-center gap-8 ${todayLogs.length > 3 ? 'animate-[marquee_30s_linear_infinite]' : ''}`}>
                {todayLogs.length > 0 ? todayLogs.map((log, idx) => (

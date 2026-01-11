@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppState, AttendanceStatus, Gender, Student, Grades, MaterialInfo } from '../types.ts';
-import { Save, ChevronDown, ClipboardList, GraduationCap, FileText, Users, Clock, Check, Plus, Minus, Download, FileSpreadsheet, X, Award, CheckCircle2, AlertCircle, CalendarRange, Zap, UserPlus, Trash2, Search, Pencil, FileUp, FileDown } from 'lucide-react';
+import { Save, ChevronDown, ClipboardList, GraduationCap, FileText, Users, Clock, Check, Plus, Minus, Download, FileSpreadsheet, X, Award, CheckCircle2, AlertCircle, CalendarRange, Zap, UserPlus, Trash2, Search, Pencil, FileUp, FileDown, Trash } from 'lucide-react';
 import { MONTHS_SEM1, MONTHS_SEM2 } from '../constants.tsx';
 import * as XLSX from 'xlsx';
 
@@ -234,7 +234,9 @@ const TeacherDashboard: React.FC<Props> = ({ data, updateData }) => {
     const totalRecorded = h + s + i + a + d;
     const totalEffectiveDays = getTotalMeetingDays();
     
-    const weightedScore = h + d + (s * 0.95) + (i * 0.9) + (a * 0);
+    // Penyesuaian Bobot: Alpa (A) tidak lagi 0, melainkan 0.75 (sesuai permintaan user agar tidak terlalu besar pengurangannya)
+    // Sakit dan Izin juga diberikan bobot yang sangat mendekati Hadir.
+    const weightedScore = h + d + (s * 0.98) + (i * 0.95) + (a * 0.75);
     const unrecordedDays = Math.max(0, totalEffectiveDays - totalRecorded);
     const finalScore = weightedScore + unrecordedDays;
     const percentage = Math.round((finalScore / totalEffectiveDays) * 100);
@@ -265,9 +267,43 @@ const TeacherDashboard: React.FC<Props> = ({ data, updateData }) => {
     updateData({ ...data, semesters: { ...data.semesters, [selectedSemester]: { ...semesterData, config: { ...config, materials: [...materials, newMaterial] } } } });
   };
 
+  const deleteMaterial = (materialId: string, index: number) => {
+    // Menghapus material tanpa dialog konfirmasi agar "otomatis" saat diklik
+    const label = materials[index].label;
+    
+    // Remove from materials list
+    const newMaterials = materials.filter(m => m.id !== materialId);
+    
+    // Sync all students' daily grades array by removing the index
+    const newGradesRecord = { ...semesterData.grades };
+    Object.keys(newGradesRecord).forEach(studentId => {
+      const g = { ...newGradesRecord[studentId] };
+      const newDaily = [...g.daily];
+      newDaily.splice(index, 1);
+      g.daily = newDaily;
+      newGradesRecord[studentId] = g;
+    });
+
+    updateData({ 
+      ...data, 
+      semesters: { 
+        ...data.semesters, 
+        [selectedSemester]: { 
+          ...semesterData, 
+          config: { ...config, materials: newMaterials },
+          grades: newGradesRecord
+        } 
+      } 
+    });
+
+    setToastMessage(`KOLOM ${label} BERHASIL DIHAPUS`);
+    setShowSaveToast(true);
+    setTimeout(() => setShowSaveToast(false), 2000);
+  };
+
   const removeMaterial = () => {
     if (materials.length === 0) return;
-    updateData({ ...data, semesters: { ...data.semesters, [selectedSemester]: { ...semesterData, config: { ...config, materials: materials.slice(0, -1) } } } });
+    deleteMaterial(materials[materials.length - 1].id, materials.length - 1);
   };
 
   const updateMaterialTopic = (id: string, topic: string) => {
@@ -372,7 +408,7 @@ const TeacherDashboard: React.FC<Props> = ({ data, updateData }) => {
         });
         row['KEHADIRAN (%)'] = att.percentage + '%';
       } else {
-        materials.forEach((m, idx) => { row[m.label] = g.daily[idx] || 0; });
+        materials.forEach((m, idx) => { row[`${m.label} (${m.topic})`] = g.daily[idx] || 0; });
         row['AVG NH'] = avgNH;
         row['PTS'] = g.pts;
         row['PAS'] = g.pas;
@@ -481,7 +517,7 @@ const TeacherDashboard: React.FC<Props> = ({ data, updateData }) => {
               </div>
             )}
 
-            {activeTab === 'grading' && (
+            {(activeTab === 'grading' || (activeTab === 'recap' && recapSubTab === 'grading')) && (
               <div className="flex items-center bg-white border border-slate-200 px-3 py-1.5 rounded-xl gap-3 shadow-sm">
                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">KKM:</span>
                  {['7', '8', '9'].map(grade => (
@@ -504,9 +540,9 @@ const TeacherDashboard: React.FC<Props> = ({ data, updateData }) => {
               <input type="date" value={attendanceDate} onChange={(e) => setAttendanceDate(e.target.value)} className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl font-black text-slate-500 outline-none text-[10px] tracking-widest cursor-pointer shadow-sm" />
             )}
 
-            {(activeTab === 'grading' || activeTab === 'recap' || activeTab === 'students') && (
+            {(activeTab === 'grading' || (activeTab === 'recap' && recapSubTab === 'grading') || activeTab === 'students') && (
               <div className="flex gap-1.5">
-                {activeTab === 'grading' && (
+                {(activeTab === 'grading' || (activeTab === 'recap' && recapSubTab === 'grading')) && (
                   <>
                     <button onClick={removeMaterial} className="bg-rose-50 text-rose-500 p-1.5 rounded-lg hover:bg-rose-100 transition-colors shadow-sm"><Minus className="w-3.5 h-3.5" /></button>
                     <button onClick={addMaterial} className="bg-blue-50 text-blue-500 p-1.5 rounded-lg hover:bg-blue-100 transition-colors shadow-sm"><Plus className="w-3.5 h-3.5" /></button>
@@ -635,16 +671,23 @@ const TeacherDashboard: React.FC<Props> = ({ data, updateData }) => {
                   <th rowSpan={2} className="px-5 py-3 w-12 text-center">NO</th>
                   <th rowSpan={2} className="px-5 py-3">NAMA SISWA</th>
                   <th rowSpan={2} className="px-5 py-3 w-24 text-center">NIS</th>
-                  {materials.map(m => (
-                    <th key={m.id} className="px-2 py-1.5 text-center border-l border-white/5 bg-[#252f3f] text-blue-400">
-                       <p className="text-[8px] mb-0.5">{m.label}</p>
-                       <input 
-                        type="text" 
-                        value={m.topic} 
-                        onChange={(e) => updateMaterialTopic(m.id, e.target.value)}
-                        className="bg-transparent border-none text-[7px] text-white font-black text-center w-full focus:outline-none uppercase" 
-                        placeholder="TOPIK"
-                       />
+                  {materials.map((m, idx) => (
+                    <th key={m.id} className="px-2 py-1.5 text-center border-l border-white/5 bg-[#252f3f] text-blue-400 group/th relative">
+                       <div className="flex flex-col items-center">
+                         <div className="flex items-center gap-1">
+                           <p className="text-[8px] mb-0.5">{m.label}</p>
+                           <button onClick={() => deleteMaterial(m.id, idx)} className="opacity-0 group-hover/th:opacity-100 transition-opacity bg-rose-500 hover:bg-rose-600 text-white p-0.5 rounded-full shadow-lg" title={`Hapus ${m.label}`}>
+                             <X className="w-2 h-2" />
+                           </button>
+                         </div>
+                         <input 
+                          type="text" 
+                          value={m.topic} 
+                          onChange={(e) => updateMaterialTopic(m.id, e.target.value)}
+                          className="bg-transparent border-none text-[7px] text-white font-black text-center w-full focus:outline-none uppercase" 
+                          placeholder="TOPIK"
+                         />
+                       </div>
                     </th>
                   ))}
                   <th className="px-5 py-3 text-center bg-[#242f3f] border-l border-white/5">AVG</th>
@@ -749,19 +792,25 @@ const TeacherDashboard: React.FC<Props> = ({ data, updateData }) => {
                 </table>
               </div>
             ) : (
-              <table className="w-full text-left border-collapse min-w-[1000px]">
+              <table className="w-full text-left border-collapse min-w-[1200px]">
                 <thead className="sticky top-0 z-30">
                   <tr className="bg-[#1e293b] text-white/40 text-[9px] font-black uppercase tracking-widest shadow-sm">
-                    <th className="px-5 py-3 w-12 text-center">NO</th>
-                    <th className="px-5 py-3">NAMA SISWA</th>
-                    <th className="px-5 py-3 w-24 text-center">NIS</th>
-                    <th className="px-5 py-3 w-14 text-center">L/P</th>
-                    <th className="px-5 py-3 text-center">AVG NH</th>
-                    <th className="px-5 py-3 text-center">PTS</th>
-                    <th className="px-5 py-3 text-center">PAS</th>
-                    <th className="px-5 py-3 text-center bg-blue-600 text-white">RAPORT</th>
-                    <th className="px-5 py-3 text-center">KKM</th>
-                    <th className="px-5 py-3 text-center">STATUS</th>
+                    <th rowSpan={2} className="px-5 py-3 w-12 text-center">NO</th>
+                    <th rowSpan={2} className="px-5 py-3">NAMA SISWA</th>
+                    <th rowSpan={2} className="px-5 py-3 w-24 text-center">NIS</th>
+                    <th rowSpan={2} className="px-5 py-3 w-14 text-center">L/P</th>
+                    {materials.map(m => (
+                      <th key={m.id} className="px-2 py-1 text-center border-l border-white/5 bg-[#252f3f] text-blue-400">
+                         <p className="text-[7px] opacity-60">{m.label}</p>
+                         <p className="text-[7px] font-black uppercase">{m.topic}</p>
+                      </th>
+                    ))}
+                    <th rowSpan={2} className="px-5 py-3 text-center bg-[#242f3f] border-l border-white/5">AVG NH</th>
+                    <th rowSpan={2} className="px-5 py-3 text-center bg-[#242f3f] border-l border-white/5">PTS</th>
+                    <th rowSpan={2} className="px-5 py-3 text-center bg-[#242f3f] border-l border-white/5">PAS</th>
+                    <th rowSpan={2} className="px-5 py-3 text-center bg-blue-600 text-white">RAPORT</th>
+                    <th rowSpan={2} className="px-5 py-3 text-center">KKM</th>
+                    <th rowSpan={2} className="px-5 py-3 text-center">STATUS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -770,18 +819,23 @@ const TeacherDashboard: React.FC<Props> = ({ data, updateData }) => {
                     const g = semesterData.grades[s.id] || { daily: [], pts: 0, pas: 0 };
                     return (
                       <tr key={s.id} className="group hover:bg-slate-50 transition-colors">
-                        <td className="px-5 py-3 text-center text-slate-300 font-bold text-[11px]">{i + 1}</td>
-                        <td className="px-5 py-3">
-                          <div className="font-black text-[#1e293b] text-[11px] uppercase tracking-wide truncate max-w-[200px]">{s.name}</div>
+                        <td className="px-5 py-2.5 text-center text-slate-300 font-bold text-[11px]">{i + 1}</td>
+                        <td className="px-5 py-2.5">
+                          <div className="font-black text-[#1e293b] text-[11px] uppercase tracking-wide truncate max-w-[180px]">{s.name}</div>
                         </td>
-                        <td className="px-5 py-3 text-center text-slate-400 font-bold text-[10px]">{s.nis}</td>
-                        <td className="px-5 py-3 text-center text-slate-400 font-black text-[10px]">{s.gender}</td>
-                        <td className="px-5 py-3 text-center text-slate-500 font-bold text-[11px]">{avgNH}</td>
-                        <td className="px-5 py-3 text-center text-slate-500 font-bold text-[11px]">{g.pts}</td>
-                        <td className="px-5 py-3 text-center text-slate-500 font-bold text-[11px]">{g.pas}</td>
-                        <td className="px-5 py-3 text-center font-black text-[13px] bg-blue-50/30 text-blue-600 border-l border-white/5">{raport}</td>
-                        <td className="px-5 py-3 text-center text-slate-300 font-black text-[10px]">{kkm}</td>
-                        <td className="px-5 py-3 text-center">
+                        <td className="px-5 py-2.5 text-center text-slate-400 font-bold text-[10px]">{s.nis}</td>
+                        <td className="px-5 py-2.5 text-center text-slate-400 font-black text-[10px]">{s.gender}</td>
+                        {materials.map((m, idx) => (
+                          <td key={m.id} className="px-2 py-2.5 text-center border-l border-slate-50 text-[11px] font-bold text-slate-500">
+                             {g.daily[idx] || 0}
+                          </td>
+                        ))}
+                        <td className="px-5 py-2.5 text-center text-slate-500 font-bold text-[11px]">{avgNH}</td>
+                        <td className="px-5 py-2.5 text-center text-slate-500 font-bold text-[11px]">{g.pts}</td>
+                        <td className="px-5 py-2.5 text-center text-slate-500 font-bold text-[11px]">{g.pas}</td>
+                        <td className="px-5 py-2.5 text-center font-black text-[13px] bg-blue-50/30 text-blue-600 border-l border-white/5">{raport}</td>
+                        <td className="px-5 py-2.5 text-center text-slate-300 font-black text-[10px]">{kkm}</td>
+                        <td className="px-5 py-2.5 text-center">
                            <div className="flex items-center justify-center gap-1.5">
                               {isTuntas ? (
                                 <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-xl flex items-center gap-1.5 border border-emerald-100 shadow-sm">

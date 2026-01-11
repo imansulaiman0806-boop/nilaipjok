@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserCog, ChevronLeft, Loader2, GraduationCap, Search, Activity, LayoutGrid, Clock, ShieldCheck, Zap } from 'lucide-react';
+import { UserCog, ChevronLeft, Loader2, GraduationCap, Search, Activity, LayoutGrid, Clock, ShieldCheck, Zap, Scan, FileText, Info as InfoIcon } from 'lucide-react';
 import { AppState, Gender } from './types.ts';
 import TeacherDashboard from './components/TeacherDashboard.tsx';
 import StudentDashboard from './components/StudentDashboard.tsx';
@@ -8,10 +8,10 @@ import { APP_TITLE, SCHOOL_NAME } from './constants.tsx';
 import { supabase } from './supabaseClient.ts';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'landing' | 'teacher' | 'student' | 'grades'>('landing');
+  const [view, setView] = useState<'landing' | 'teacher' | 'student_portal'>('landing');
+  const [studentTab, setStudentTab] = useState<'presence' | 'grades' | 'info'>('presence');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   const [data, setData] = useState<AppState>({
     students: [],
@@ -57,76 +57,68 @@ const App: React.FC = () => {
   }, [data, isLoading]);
 
   if (isLoading) return (
-    <div className="h-screen w-full flex flex-col items-center justify-center bg-[#f4f7fa]">
-      <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
-      <span className="text-[10px] font-bold tracking-[0.3em] text-slate-400 uppercase">Loading System...</span>
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-[#020617]">
+      <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-4" />
+      <span className="text-[10px] font-black tracking-[0.4em] text-white/40 uppercase">Initializing Systems...</span>
     </div>
   );
 
   return (
-    <div className="h-full w-full bg-[#f4f7fa] overflow-hidden flex flex-col font-['Plus_Jakarta_Sans']">
+    <div className="h-full w-full bg-[#020617] overflow-hidden flex flex-col font-['Plus_Jakarta_Sans']">
       <main className="flex-1 relative overflow-hidden">
         {view === 'landing' && (
-          <div className="h-full w-full overflow-y-auto flex flex-col items-center justify-center p-8 bg-gradient-to-b from-[#f8fbfe] to-[#edf3f9]">
+          <div className="h-full w-full overflow-y-auto flex flex-col items-center justify-center p-8 bg-gradient-to-b from-[#020617] to-[#0f172a]">
             
             {/* Top Badge */}
-            <div className="mb-8 flex items-center gap-2 bg-white border border-slate-200 px-5 py-2 rounded-full shadow-sm">
+            <div className="mb-8 flex items-center gap-2 bg-white/5 border border-white/10 px-5 py-2 rounded-full shadow-2xl backdrop-blur-md">
               <Zap className="w-3.5 h-3.5 text-blue-500 fill-blue-500" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">PJOK DIGITAL SMP PGRI</span>
+              <span className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em]">PJOK DIGITAL SMP PGRI</span>
             </div>
 
             {/* Header Title */}
             <div className="text-center mb-16">
-              <h1 className="text-5xl md:text-7xl font-[900] text-[#1e293b] tracking-tight mb-2 uppercase">
+              <h1 className="text-5xl md:text-8xl font-[900] text-white tracking-tighter mb-2 uppercase">
                 {SCHOOL_NAME}
               </h1>
-              <p className="text-[11px] md:text-xs font-bold text-slate-400 tracking-[0.4em] uppercase">
-                {APP_TITLE}
-              </p>
+              <div className="flex items-center justify-center gap-4">
+                <div className="h-[1px] w-12 bg-blue-500/50"></div>
+                <p className="text-[10px] md:text-xs font-bold text-blue-400 tracking-[0.5em] uppercase">
+                  {APP_TITLE}
+                </p>
+                <div className="h-[1px] w-12 bg-blue-500/50"></div>
+              </div>
             </div>
 
             {/* Menu Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
               
               {/* Portal Guru */}
               <button 
                 onClick={() => setView('teacher')}
-                className="group bg-white p-12 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.03)] border border-transparent hover:border-blue-500/20 hover:shadow-[0_30px_60px_rgba(0,0,0,0.06)] transition-all duration-300 flex flex-col items-center text-center"
+                className="group bg-slate-900/40 p-12 rounded-[4rem] shadow-2xl border border-white/5 hover:border-blue-500/30 hover:bg-slate-900/60 transition-all duration-500 flex flex-col items-center text-center relative overflow-hidden"
               >
-                <div className="w-20 h-20 bg-blue-600 rounded-[1.5rem] flex items-center justify-center text-white mb-8 shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
-                  <UserCog className="w-10 h-10" />
+                <div className="absolute top-0 left-0 w-full h-1 bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="w-24 h-24 bg-blue-600 rounded-[2rem] flex items-center justify-center text-white mb-8 shadow-[0_20px_40px_rgba(37,99,235,0.3)] group-hover:scale-110 transition-transform duration-500">
+                  <UserCog className="w-12 h-12" />
                 </div>
-                <h3 className="text-lg font-extrabold text-[#1e293b] uppercase tracking-wide mb-3">Portal Guru</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed max-w-[180px]">
-                  Manajemen Absensi, Nilai & Rekapitulasi Data
+                <h3 className="text-xl font-black text-white uppercase tracking-widest mb-3">Portal Pengajar</h3>
+                <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] leading-relaxed max-w-[220px]">
+                  Pusat Kendali Absensi, Penilaian & Rekapitulasi Digital
                 </p>
               </button>
 
-              {/* Portal Siswa (Presensi) */}
+              {/* Portal Siswa (Unified) */}
               <button 
-                onClick={() => setView('student')}
-                className="group bg-white p-12 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.03)] border border-transparent hover:border-emerald-500/20 hover:shadow-[0_30px_60px_rgba(0,0,0,0.06)] transition-all duration-300 flex flex-col items-center text-center"
+                onClick={() => { setView('student_portal'); setStudentTab('presence'); }}
+                className="group bg-slate-900/40 p-12 rounded-[4rem] shadow-2xl border border-white/5 hover:border-emerald-500/30 hover:bg-slate-900/60 transition-all duration-500 flex flex-col items-center text-center relative overflow-hidden"
               >
-                <div className="w-20 h-20 bg-emerald-500 rounded-[1.5rem] flex items-center justify-center text-white mb-8 shadow-lg shadow-emerald-200 group-hover:scale-110 transition-transform">
-                  <GraduationCap className="w-10 h-10" />
+                <div className="absolute top-0 left-0 w-full h-1 bg-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="w-24 h-24 bg-emerald-500 rounded-[2rem] flex items-center justify-center text-white mb-8 shadow-[0_20px_40px_rgba(16,185,129,0.3)] group-hover:scale-110 transition-transform duration-500">
+                  <GraduationCap className="w-12 h-12" />
                 </div>
-                <h3 className="text-lg font-extrabold text-[#1e293b] uppercase tracking-wide mb-3">Portal Siswa</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed max-w-[180px]">
-                  Dashboard Kehadiran & Absensi Mandiri
-                </p>
-              </button>
-
-              {/* Portal Nilai */}
-              <button 
-                onClick={() => setView('grades')}
-                className="group bg-white p-12 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.03)] border border-transparent hover:border-indigo-500/20 hover:shadow-[0_30px_60px_rgba(0,0,0,0.06)] transition-all duration-300 flex flex-col items-center text-center"
-              >
-                <div className="w-20 h-20 bg-indigo-600 rounded-[1.5rem] flex items-center justify-center text-white mb-8 shadow-lg shadow-indigo-200 group-hover:scale-110 transition-transform">
-                  <Search className="w-10 h-10" />
-                </div>
-                <h3 className="text-lg font-extrabold text-[#1e293b] uppercase tracking-wide mb-3">Portal Nilai</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed max-w-[180px]">
-                  Cek Nilai PJOK Cukup Tap Kartu Siswa
+                <h3 className="text-xl font-black text-white uppercase tracking-widest mb-3">Portal Siswa</h3>
+                <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] leading-relaxed max-w-[220px]">
+                  Akses Mandiri Presensi & Cek Nilai Secara Real-time
                 </p>
               </button>
 
@@ -134,8 +126,7 @@ const App: React.FC = () => {
 
             {/* Footer */}
             <div className="mt-24 text-center">
-              <div className="w-12 h-[3px] bg-blue-500/30 mx-auto mb-6 rounded-full"></div>
-              <p className="text-[10px] font-bold text-slate-400 tracking-[0.4em] uppercase">
+              <p className="text-[9px] font-black text-white/20 tracking-[0.5em] uppercase">
                 © 2026 DEPARTEMEN IT SMP PGRI JATIUWUNG
               </p>
             </div>
@@ -155,38 +146,89 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {view === 'student' && (
-          <div className="h-full flex flex-col fade-in overflow-hidden">
-            <div className="shrink-0 bg-[#0F172A] border-b border-white/5 px-6 py-2 flex items-center gap-4">
-              <button onClick={() => setView('landing')} className="flex items-center gap-2 text-white/40 hover:text-white font-black text-[10px] tracking-widest uppercase transition-colors py-2">
-                <ChevronLeft className="w-4 h-4" /> Kembali
+        {view === 'student_portal' && (
+          <div className="h-full flex flex-col fade-in overflow-hidden relative bg-[#020617]">
+            
+            {/* Unified Top Bar */}
+            <div className="shrink-0 bg-[#020617] border-b border-white/5 px-6 py-3 flex items-center justify-between z-50">
+              <button onClick={() => setView('landing')} className="flex items-center gap-2 text-white/30 hover:text-white font-black text-[9px] tracking-[0.3em] uppercase transition-all active:scale-95">
+                <ChevronLeft className="w-4 h-4" /> KELUAR PORTAL
               </button>
+              <div className="flex items-center gap-3">
+                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                 <span className="text-[9px] font-black tracking-widest text-white/40 uppercase">STUDENT IDENTITY SECURED</span>
+              </div>
             </div>
-            <div className="flex-1 overflow-hidden">
-              <StudentDashboard data={data} updateData={setData} />
-            </div>
-          </div>
-        )}
 
-        {view === 'grades' && (
-          <div className="h-full flex flex-col fade-in overflow-hidden">
-            <div className="shrink-0 bg-[#020617] border-b border-white/5 px-6 py-2 flex items-center gap-4">
-              <button onClick={() => setView('landing')} className="flex items-center gap-2 text-white/40 hover:text-white font-black text-[10px] tracking-widest uppercase transition-colors py-2">
-                <ChevronLeft className="w-4 h-4" /> Kembali
-              </button>
+            {/* View Container */}
+            <div className="flex-1 overflow-hidden relative">
+              {studentTab === 'presence' && <StudentDashboard data={data} updateData={setData} />}
+              {studentTab === 'grades' && <GradesPortal data={data} />}
+              {studentTab === 'info' && (
+                <div className="h-full flex flex-col items-center justify-center p-12 text-center animate-in fade-in zoom-in duration-500">
+                   <div className="w-24 h-24 bg-blue-600/10 rounded-full flex items-center justify-center text-blue-500 mb-8 border border-blue-500/20">
+                      <InfoIcon className="w-10 h-10" />
+                   </div>
+                   <h2 className="text-3xl font-black text-white uppercase tracking-widest mb-4">Informasi Akademik</h2>
+                   <p className="text-white/40 text-xs font-bold tracking-[0.2em] uppercase leading-loose max-w-lg">
+                     Jadwal Olahraga Semester ini tersedia setiap hari Selasa dan Kamis.<br/>
+                     Pastikan membawa kartu identitas digital untuk setiap sesi presensi.<br/>
+                     Hubungi guru PJOK jika ada kendala data nilai.
+                   </p>
+                   <div className="mt-12 grid grid-cols-2 gap-4 w-full max-w-md">
+                      <div className="bg-white/5 p-6 rounded-3xl border border-white/5">
+                         <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-2">Total Siswa Aktif</p>
+                         <p className="text-2xl font-black text-white">{data.students.length}</p>
+                      </div>
+                      <div className="bg-white/5 p-6 rounded-3xl border border-white/5">
+                         <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-2">Semester Aktif</p>
+                         <p className="text-2xl font-black text-blue-500">{new Date().getMonth() >= 6 ? 'GANJIL' : 'GENAP'}</p>
+                      </div>
+                   </div>
+                </div>
+              )}
             </div>
-            <div className="flex-1 overflow-hidden">
-              <GradesPortal data={data} />
+
+            {/* MODERN FLOATING NAVIGATION DOCK */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[100] w-auto">
+               <div className="bg-[#0f172a]/80 backdrop-blur-2xl border border-white/10 p-2 rounded-[2.5rem] flex items-center gap-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                  <button 
+                    onClick={() => setStudentTab('presence')}
+                    className={`flex items-center gap-3 px-6 py-3.5 rounded-[2rem] transition-all duration-300 ${studentTab === 'presence' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-white/30 hover:text-white/60'}`}
+                  >
+                    <Scan className="w-4 h-4" />
+                    <span className="text-[10px] font-[900] tracking-[0.2em] uppercase">PRESENSI</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setStudentTab('grades')}
+                    className={`flex items-center gap-3 px-6 py-3.5 rounded-[2rem] transition-all duration-300 ${studentTab === 'grades' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' : 'text-white/30 hover:text-white/60'}`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span className="text-[10px] font-[900] tracking-[0.2em] uppercase">CEK NILAI</span>
+                  </button>
+
+                  <div className="w-[1px] h-6 bg-white/5 mx-1"></div>
+
+                  <button 
+                    onClick={() => setStudentTab('info')}
+                    className={`flex items-center gap-3 px-6 py-3.5 rounded-[2rem] transition-all duration-300 ${studentTab === 'info' ? 'bg-slate-700 text-white shadow-lg' : 'text-white/30 hover:text-white/60'}`}
+                  >
+                    <InfoIcon className="w-4 h-4" />
+                    <span className="text-[10px] font-[900] tracking-[0.2em] uppercase">INFO</span>
+                  </button>
+               </div>
             </div>
+
           </div>
         )}
       </main>
 
       {/* Sync Status Overlay */}
       {isSaving && (
-        <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl shadow-xl animate-in fade-in slide-in-from-bottom-2">
-          <Loader2 className="w-3 h-3 animate-spin text-blue-400" />
-          <span className="text-[8px] font-black tracking-widest uppercase">Syncing Cloud</span>
+        <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-2xl shadow-2xl animate-in fade-in slide-in-from-bottom-2 border border-white/10">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+          <span className="text-[9px] font-black tracking-[0.3em] uppercase">Cloud Syncing</span>
         </div>
       )}
     </div>
