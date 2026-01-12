@@ -33,6 +33,10 @@ export interface Grades {
   daily: number[]; // N1, N2, N3...
   pts: number;
   pas: number;
+  // Nilai Perbaikan (Remedial)
+  dailyRemedial?: number[]; 
+  ptsRemedial?: number;
+  pasRemedial?: number;
 }
 
 export interface MaterialInfo {
